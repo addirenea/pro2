@@ -1,2 +1,9 @@
-# pro2
-csci 340 project 2 - threading and process synchronization
+# Project 2
+## Threading and Process Synchronization
+
+### Instructions
+
+To compile: `make all`
+To run: `./main <number of consumers>`
+
+### Notes
