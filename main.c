@@ -2,106 +2,147 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#define MAX 3
 
-int buffer[MAX];
-// char *buffer[MAX];
+#define MAX 5
+
+char *buffer[MAX];
 
 int fill = 0;
 int use = 0;
 
-// figure out how to use while instead of for loops
-int loops = 20;
+// // figure out how to use while instead of for loops
+// int loops = 20;
 
 // use to keep track of total wc
-int acc = 0;
+volatile int acc = 0;
 
 sem_t empty;
 sem_t full;
 sem_t mutex;
 
-void put(int value)
-{
+void put(char* value) {
+
     buffer[fill] = value;
     fill = (fill + 1) % MAX;
 }
 
-int get()
-{
-    int tmp = buffer[use];
+
+char* get() {
+
+    char* tmp = buffer[use];
     use = (use + 1) % MAX;
     return tmp;
 }
 
-void *producer(void *arg)
-{
+
+int getWordCount(char *str) {
+
+    int space = 0;
+    int wc = 0;
+
+    while (*str)
+    {
+        if (*str == ' ' || *str == '\t' || *str == '\n')
+            space = 0;
+
+        else if (space == 0)
+        {
+            space = 1;
+            wc++;
+        }
+
+         str++;
+    }
+
+    return wc;
+}
+
+
+void *producer(void *arg) {
     // purpose: read next line from stdin
     // & add line to buffer
 
-    int val = (long)arg;
-    for (int i = 0; i < loops; i++) {
+    char* line = arg;
 
-        assert(sem_wait(&empty) == 0);
-        assert(sem_wait(&mutex) == 0);
+    assert(sem_wait(&empty) == 0);
+    assert(sem_wait(&mutex) == 0);
 
-        put(i + val);
+    put(line);
 
-        assert(sem_post(&mutex) == 0);
-        assert(sem_post(&full) == 0);
+    assert(sem_post(&mutex) == 0);
+    assert(sem_post(&full) == 0);
 
-    }
     return NULL;
 }
 
-void *consumer(void *arg)
-{
+void *consumer(void *arg) {
     // purpose: print task num & line
     // get word count of line
     // & increament total wc acc for file
+    int *task_num = arg;
 
-    for (int i = 0; i < (loops*2); i++) {
+    assert(sem_wait(&full) == 0);
+    assert(sem_wait(&mutex) == 0);
 
-        assert(sem_wait(&full) == 0);
-        assert(sem_wait(&mutex) == 0);
+    char *line = get();
 
-        int tmp = get();
+    printf("%d: '%s'\n", *task_num, line);
 
-        assert(sem_post(&mutex) == 0);
-        assert(sem_post(&empty) == 0);
+    int wc = getWordCount(line);
 
-        printf("%d\n", tmp);
-    }
+    acc = acc + wc;
+
+    assert(sem_post(&mutex) == 0);
+    assert(sem_post(&empty) == 0);
+
     return NULL;
 }
 
-int main()
-{
+int main(int argc, char **argv) {
     // get num of consumers
+    if (argc != 2) {
 
-    pthread_t p1;
-    pthread_t p2;
+        printf("Invalid Parameters.");
+        return -1;
 
-    // init consumers array
-    pthread_t c1;
+    }
+
+    int consumers = atoi(argv[1]);
+    pthread_t pro;
 
     sem_init(&mutex, 0, 1);
     sem_init(&empty, 0, MAX);
     sem_init(&full, 0, 0);
 
-    assert(pthread_create(&p1, NULL, producer, (void*)100) == 0);
-    assert(pthread_create(&p2, NULL, producer, (void*)200) == 0);
+    assert(pthread_create(&pro, NULL, producer, (void*)100) == 0);
 
-    // create consumers via loop
-    assert(pthread_create(&c1, NULL, consumer, NULL) == 0);
 
-    assert(pthread_join(p1, NULL) == 0);
-    assert(pthread_join(p2, NULL) == 0);
+    pthread_t *con_threads = malloc(consumers * sizeof(pthread_t));
+    int *arg = malloc(sizeof(*arg));
+    for (int i = 0; i < consumers; i++) {
+        *arg = i;
 
-    // join consumers via loop
-    assert(pthread_join(c1, NULL) == 0);
+        if (pthread_create(&con_threads[i], NULL, consumer, arg) != 0) {
+            printf("Unable to create thread.\n");
+            exit(1);
+        }
+    }
+
+
+    assert(pthread_join(pro, NULL) == 0);
+
+
+    for (int i = 0; i < consumers; i++) {
+        assert(pthread_join(con_threads[i], NULL) == 0);
+    }
 
     // print final wc acc for file
+    printf("Final Word Count: %d\n", acc);
+
+    free(con_threads);
+    free(arg);
 
     return 0;
 
