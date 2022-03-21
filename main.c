@@ -12,9 +12,6 @@ char *buffer[MAX];
 int fill = 0;
 int use = 0;
 
-// // figure out how to use while instead of for loops
-// int loops = 20;
-
 // use to keep track of total wc
 volatile int acc = 0;
 
@@ -39,17 +36,17 @@ char* get() {
 
 int getWordCount(char *str) {
 
-    int space = 0;
+    int prev_in_word = 0;
     int wc = 0;
 
     while (*str)
     {
         if (*str == ' ' || *str == '\t' || *str == '\n')
-            space = 0;
+            prev_in_word = 0;
 
-        else if (space == 0)
+        else if (prev_in_word == 0)
         {
-            space = 1;
+            prev_in_word = 1;
             wc++;
         }
 
@@ -65,6 +62,9 @@ void *producer(void *arg) {
     // & add line to buffer
 
     char* line = arg;
+    // idea: instead of passing the line as arg,
+    // set up a while loop that runs while there are more lines in stdin
+    // then lines 69-75 go inside the while loop
 
     assert(sem_wait(&empty) == 0);
     assert(sem_wait(&mutex) == 0);
@@ -116,9 +116,11 @@ int main(int argc, char **argv) {
     sem_init(&empty, 0, MAX);
     sem_init(&full, 0, 0);
 
+    // what is the arg for producer? anything?
     assert(pthread_create(&pro, NULL, producer, (void*)100) == 0);
 
 
+    // CONSUMERS
     pthread_t *con_threads = malloc(consumers * sizeof(pthread_t));
     int *arg = malloc(sizeof(*arg));
     for (int i = 0; i < consumers; i++) {
