@@ -1,4 +1,4 @@
-TARGETS=
+TARGETS=main
 
 all: $(TARGETS)
 
