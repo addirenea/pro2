@@ -101,7 +101,6 @@ void *consumer(void *arg) {
 }
 
 int main(int argc, char **argv) {
-    // get num of consumers
     if (argc != 2) {
 
         printf("Invalid Parameters.");
@@ -110,19 +109,21 @@ int main(int argc, char **argv) {
     }
 
     int consumers = atoi(argv[1]);
-    pthread_t pro;
 
     sem_init(&mutex, 0, 1);
     sem_init(&empty, 0, MAX);
     sem_init(&full, 0, 0);
 
     // what is the arg for producer? anything?
+    pthread_t pro;
     assert(pthread_create(&pro, NULL, producer, (void*)100) == 0);
 
 
-    // CONSUMERS
+    // create block of consumer threads
     pthread_t *con_threads = malloc(consumers * sizeof(pthread_t));
     int *arg = malloc(sizeof(*arg));
+
+    // loop through all consumer threads and create, passing task number as arg
     for (int i = 0; i < consumers; i++) {
         *arg = i;
 
@@ -133,16 +134,19 @@ int main(int argc, char **argv) {
     }
 
 
+    // join producer and consumers
     assert(pthread_join(pro, NULL) == 0);
-
 
     for (int i = 0; i < consumers; i++) {
         assert(pthread_join(con_threads[i], NULL) == 0);
     }
 
+
     // print final wc acc for file
     printf("Final Word Count: %d\n", acc);
 
+
+    // free allocated memory
     free(con_threads);
     free(arg);
 
