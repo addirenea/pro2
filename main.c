@@ -120,7 +120,7 @@ int main(int argc, char **argv) {
 
 
     // create block of consumer threads
-    pthread_t *con_threads = malloc(consumers * sizeof(pthread_t));
+    pthread_t con_threads[consumers];
     int *arg = malloc(sizeof(*arg));
 
     // loop through all consumer threads and create, passing task number as arg
@@ -147,7 +147,6 @@ int main(int argc, char **argv) {
 
 
     // free allocated memory
-    free(con_threads);
     free(arg);
 
     return 0;
