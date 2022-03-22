@@ -37,15 +37,10 @@ void put(char *value, size_t size) {
 
 
 
-char* get() {
+void erase() {
 
-    char *tmp = buffer[use];
-    // if (*temper != -1) {
-    //     memset(buffer[use], 0, 256);
-    //
-    // }
+    memset(buffer[use], 0, 256);
     use = (use + 1) % MAX;
-    return tmp;
 }
 
 
@@ -81,8 +76,6 @@ void *producer(void *arg) {
     // purpose: read next line from stdin
     // & add line to buffer
 
-    // int consumers = (uintptr_t)arg;
-
     // continues until reaching end of stdin file
     while(!feof(stdin)) {
 
@@ -108,15 +101,6 @@ void *producer(void *arg) {
     // waits until consumers have run on all remaining lines
     assert(sem_wait(&empty) == 0);
 
-    // FINAL CALL! marks program as complete and posts to full to signal consumers to end
-    // complete = 1;
-    // for (int i = 0; i < consumers; i++) {
-    //     assert(sem_post(&full) == 0);
-    //     // assert(sem_post(&empty) == 0);
-    // }
-
-
-
     assert(sem_wait(&empty) == 0);
     assert(sem_wait(&mutex) == 0);
 
@@ -139,42 +123,31 @@ void *consumer(void *arg) {
     int task_num = (uintptr_t)arg;
 
     while(1) {
-        printf("thread %d waiting \n", task_num);
 
-        // CRITICAL SECTION: gets next line
         assert(sem_wait(&full) == 0);
         assert(sem_wait(&mutex) == 0);
 
-        char *line = get();
+        // gets next line
+        char *line = buffer[use];
 
         // checks if program is complete
-        printf("thread %d at if statement \n", task_num);
         if (*line == -1) {
-            printf("inside if statement \n");
             assert(sem_post(&mutex) == 0);
             assert(sem_post(&full) == 0);
             break;
         }
 
-        // assert(sem_post(&mutex) == 0);
-        // assert(sem_post(&empty) == 0);
-
         // prints task and line
         printf("%d: %s", task_num, line);
 
-        // gets word count for current line
+        // gets word count for current line & updates global acc
         int wc = getWordCount(line);
-        printf("word count: %d \n", wc);
-
-        // CRITICAL SECTION: updates acc
-        // assert(sem_wait(&mutex) == 0);
         acc = acc + wc;
-        // assert(sem_post(&mutex) == 0);
+
+        erase();
 
         assert(sem_post(&mutex) == 0);
         assert(sem_post(&empty) == 0);
-        printf("thread %d posted \n", task_num);
-
     }
 
     return NULL;
@@ -195,7 +168,6 @@ int main(int argc, char **argv) {
     sem_init(&mutex, 0, 1);
     sem_init(&empty, 0, MAX);
     sem_init(&full, 0, 0);
-    // buffer = (char **) malloc(MAX * (sizeof(char) * 256) + 1);
 
 
     // create producer
@@ -226,7 +198,6 @@ int main(int argc, char **argv) {
     printf("\n Final Word Count: %d\n", acc);
 
 
-    // free(buffer);
     return 0;
 
 }
