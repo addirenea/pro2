@@ -1,3 +1,5 @@
+// OS Project 2 - Word Count (Producer-Consumer)
+
 #include <assert.h>
 #include <pthread.h>
 #include <semaphore.h>
@@ -11,15 +13,12 @@
 
 volatile int acc = 0;
 
-char * endmsg = "END OF FILE. TERMINATE PROGRAM NOW.";
-
-// char buffer[MAX][256];
 char buffer[MAX][256];
 
 int fill = 0;
 int use = 0;
-sem_t empty;
-sem_t full; // these 2 used to check track of count in buffer
+sem_t empty; // counts empty spots in buffer
+sem_t full; // counts filled spots in buffer
 sem_t mutex; // locks critical sections
 int complete = 0; // alerts when EOF is reached
 
@@ -98,17 +97,17 @@ void *producer(void *arg) {
 
     }
 
-    // waits until consumers have run on all remaining lines
-    assert(sem_wait(&empty) == 0);
-
-    assert(sem_wait(&empty) == 0);
-    assert(sem_wait(&mutex) == 0);
-
+    // flushes out buffer with special value, telling consumers to end program
     for (int i = 0; i < MAX; i++) {
+
+        assert(sem_wait(&empty) == 0);
+        assert(sem_wait(&mutex) == 0);
+
         memset(buffer[i], -1, 256);
+
+        assert(sem_post(&mutex) == 0);
+        assert(sem_post(&full) == 0);
     }
-    assert(sem_post(&mutex) == 0);
-    assert(sem_post(&full) == 0);
 
     return NULL;
 }
@@ -137,6 +136,7 @@ void *consumer(void *arg) {
             break;
         }
 
+
         // prints task and line
         printf("%d: %s", task_num, line);
 
@@ -144,6 +144,7 @@ void *consumer(void *arg) {
         int wc = getWordCount(line);
         acc = acc + wc;
 
+        // wipes out current line in buffer
         erase();
 
         assert(sem_post(&mutex) == 0);
@@ -172,7 +173,7 @@ int main(int argc, char **argv) {
 
     // create producer
     pthread_t pro;
-    assert(pthread_create(&pro, NULL, producer, (void*)(uintptr_t)consumers) == 0); // does producer need an arg?
+    assert(pthread_create(&pro, NULL, producer, NULL) == 0);
 
 
     // create consumers
