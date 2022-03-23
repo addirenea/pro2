@@ -1,5 +1,6 @@
 # Project 2
 ## Threading and Process Synchronization
+Completed by Addison MacPhee and Violet Smith
 
 ### Instructions
 
