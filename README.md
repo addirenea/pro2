@@ -3,7 +3,7 @@
 
 ### Instructions
 
-To compile: `make all`
+To compile: `make`
 
 To run: `./main <number of consumers>`
 
